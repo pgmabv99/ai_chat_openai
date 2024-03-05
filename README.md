@@ -1,0 +1,2 @@
+-function call from model
+-todo embedding search
