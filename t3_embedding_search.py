@@ -5,15 +5,18 @@ import pandas as pd  # for storing text and embeddings data
 import tiktoken  # for counting tokens
 import os # for getting API token from env variable OPENAI_API_KEY
 from scipy import spatial  # for calculating vector similarities for search
+from transformers import GPT2Tokenizer
 
 
 
 
 class test:
     EMBEDDING_MODEL = "text-embedding-ada-002"
-    GPT_MODEL = "gpt-3.5-turbo"
+    # GPT_MODEL = "gpt-3.5-turbo"
+    GPT_MODEL = "gpt-4"
     def __init__(self) -> None:
         self.client = OpenAI()
+        self.top_n=5
         pass
 
     def ask_no_prompt(self, query) -> str:
@@ -47,7 +50,6 @@ class test:
     # search function
     def strings_ranked_by_relatedness(self,
         query: str,
-        top_n: int = 5
     ) -> tuple[list[str], list[float]]:
 
         """Returns a list of strings and relatednesses, sorted from most related to least."""
@@ -56,7 +58,8 @@ class test:
             input=query,
         )
         query_embedding = query_embedding_response.data[0].embedding
-        relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y)
+        # relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y)
+        relatedness_fn=lambda x, y: spatial.distance.cosine(x, y)
         strings_and_relatednesses = []
         for i, row in self.df.iterrows():
             dist=1-relatedness_fn(query_embedding, row["embedding"])
@@ -65,14 +68,24 @@ class test:
         strings_and_relatednesses.sort(key=lambda x: x[1], reverse=True)
         # list of pairs to pair of lists
         strings, relatednesses = zip(*strings_and_relatednesses)
-        return strings[:top_n], relatednesses[:top_n]
+        return strings[:self.top_n], relatednesses[:self.top_n]
 
     def get_num_tokens(self,
                    text: str
                    ) -> int:
         """Return the number of tokens in a string."""
         encoding = tiktoken.encoding_for_model(test.GPT_MODEL)
-        return len(encoding.encode(text))
+        tokens=encoding.encode(text)
+        num_tokens=len(tokens)
+        # print("====num_tokens", num_tokens)
+        # print(tokens)
+        return num_tokens
+
+    def get_real_tokens_gpt2(self,text):
+        # Load the GPT-2 tokenizer
+        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        tokens = tokenizer.tokenize(text)
+        print(tokens)
 
 
     def query_prompt(self,
@@ -88,7 +101,9 @@ class test:
 
         # add top N closes articles
         question = f"\n\nQuestion: {query}"
-        strings, _= self.strings_ranked_by_relatedness(query)
+        strings, relatedeness= self.strings_ranked_by_relatedness(query)
+        for i in range(len(strings)):
+            print(relatedeness[i],strings[i][:50])
         for string in strings:
             next_article = f'\n\nWikipedia article section:\n"""\n{string}\n"""'
             num_tokens=self.get_num_tokens(prompt+ question + next_article)
@@ -107,12 +122,12 @@ class test:
     def ask_with_prompts(self,
             query: str,
             token_budget: int = 4096 - 500,
-            print_message: bool = False,
+            print_prompt: bool = False,
             ) -> str:
 
         """Answers a query using GPT and a dataframe of relevant texts and embeddings."""
         prompt = self.query_prompt(query,  token_budget=token_budget)
-        if print_message:
+        if print_prompt:
             print(prompt)
 
         messages = [
@@ -130,12 +145,9 @@ t1=test()
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 answer=t1.ask_no_prompt(query)
 print("NO  prompt answer=====", answer)
-# exit()
+
 t1.get_embed()
-# examples
-# strings, relatednesses = t1.strings_ranked_by_relatedness("curling gold medal",  top_n=5)
-# for string, relatedness in zip(strings, relatednesses):
-#     print(f"{relatedness=:.3f}")
-#     print(string[:50])
-answer=t1.ask_with_prompts(query)
+answer=t1.ask_with_prompts(query,print_prompt=False)
 print("with prompt answer======", answer)
+# t1.get_num_tokens("dear ,come here dear")
+# t1.get_real_tokens_gpt2("dear ,come here dear")
