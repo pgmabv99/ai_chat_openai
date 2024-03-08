@@ -169,7 +169,7 @@ class test:
         time.sleep(5)
 
 t1=test()
-# t1.embedding_get()
+t1.embedding_get()
 t1.embedding_load()
 t1.comp()
 
