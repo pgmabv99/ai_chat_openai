@@ -6,35 +6,31 @@ import tiktoken  # for counting tokens
 import os # for getting API token from env variable OPENAI_API_KEY
 from scipy import spatial  # for calculating vector similarities for search
 from transformers import GPT2Tokenizer
+import difflib
+
 
 
 
 
 class test:
-    EMBEDDING_MODEL = "text-embedding-ada-002"
+    # EMBEDDING_MODEL = "text-embedding-ada-002"
+    #  operands could not be broadcast together with shapes (3072,) (1536,)
+    # EMBEDDING_MODEL = "text-embedding-3-large"
+    EMBEDDING_MODEL = "text-embedding-3-small"
     # GPT_MODEL = "gpt-3.5-turbo"
-    GPT_MODEL = "gpt-4"
+    # GPT_MODEL = "gpt-4"
+    GPT_MODEL = "gpt-4-turbo-preview"
     def __init__(self) -> None:
         self.client = OpenAI()
         self.top_n=5
+        # self.top_n=None
+        self.token_budget = 4096 - 500
+        # self.token_budget =  10**5
         pass
 
-    def ask_no_prompt(self, query) -> str:
 
-        """ ask without prompt"""
-        response = self.client.chat.completions.create(
-            messages=[
-                {'role': 'system', 'content': 'You answer questions about the 2022 Winter Olympics.'},
-                {'role': 'user', 'content': query},
-            ],
-            model=test.GPT_MODEL,
-            temperature=0,
-        )
 
-        return(response.choices[0].message.content)
-        pass
-
-    def get_embed(self):
+    def embedding_get(self):
         # download pre-chunked text and pre-computed embeddings
         # this file is ~200 MB, so may take a minute depending on your connection speed
         """get list of embedding for wiki from external site"""
@@ -44,7 +40,7 @@ class test:
         self.df = pd.read_csv(embeddings_path)
         # convert embeddings from CSV str type back to list type
         self.df['embedding'] = self.df['embedding'].apply(ast.literal_eval)
-        print(self.df.head(5))
+        # print(self.df.head(5))
         pass
 
     # search function
@@ -88,10 +84,7 @@ class test:
         print(tokens)
 
 
-    def query_prompt(self,
-        query: str,
-        token_budget: int
-    ) -> str:
+    def prompt_build(self, query):
         """Return a prompt for GPT, with relevant source texts pulled from a dataframe."""
         prompt=""
         # add introduction
@@ -102,33 +95,29 @@ class test:
         # add top N closes articles
         question = f"\n\nQuestion: {query}"
         strings, relatedeness= self.strings_ranked_by_relatedness(query)
-        for i in range(len(strings)):
-            print(relatedeness[i],strings[i][:50])
+        # for i in range(len(strings)):
+        #     print(relatedeness[i],strings[i][:50])
         for string in strings:
             next_article = f'\n\nWikipedia article section:\n"""\n{string}\n"""'
             num_tokens=self.get_num_tokens(prompt+ question + next_article)
-            if (num_tokens> token_budget):
+            if (num_tokens> self.token_budget):
                 print("budget exceeded :", num_tokens)
                 break
             else:
                 prompt += next_article
 
         # add user question
-
         prompt+=question
         return prompt
 
+    def ask(self,query,use_prompt) :
+        """Answers a query using GPT with/without prompts of additonal texts."""
+        if use_prompt:
+            self.embedding_get()
+            prompt = self.prompt_build(query)
+        else:
+            prompt = query
 
-    def ask_with_prompts(self,
-            query: str,
-            token_budget: int = 4096 - 500,
-            print_prompt: bool = False,
-            ) -> str:
-
-        """Answers a query using GPT and a dataframe of relevant texts and embeddings."""
-        prompt = self.query_prompt(query,  token_budget=token_budget)
-        if print_prompt:
-            print(prompt)
 
         messages = [
             {"role": "system", "content": "You answer questions about the 2022 Winter Olympics."},
@@ -137,17 +126,36 @@ class test:
         response = self.client.chat.completions.create(
             model=test.GPT_MODEL,
             messages=messages,
-            temperature=0
+            temperature=0,
+            seed=1,
+            # temperature=1
         )
         return response.choices[0].message.content
 
-t1=test()
-query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-answer=t1.ask_no_prompt(query)
-print("NO  prompt answer=====", answer)
+    def comp(self):
+        query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 
-t1.get_embed()
-answer=t1.ask_with_prompts(query,print_prompt=False)
-print("with prompt answer======", answer)
+        answers=[]
+        for use_prompt in (False, True):
+            answer=t1.ask(query,use_prompt)
+            print("===== use_prompt = ", use_prompt, "\n",answer)
+
+            with open("output/answer_true.txt" if use_prompt  else "output/answer_false.txt", "w" ) as file:
+                file.write(answer)
+            answers.append(answer)
+
+        differ = difflib.Differ()
+        diff = list(differ.compare(answers[0].splitlines(),answers[1].splitlines()))
+
+        print("difference ===\n " )
+        for line in diff:
+            print(line)
+
+t1=test()
+t1.comp()
+
+
+
+
 # t1.get_num_tokens("dear ,come here dear")
 # t1.get_real_tokens_gpt2("dear ,come here dear")
