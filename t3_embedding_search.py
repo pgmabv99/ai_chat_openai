@@ -25,7 +25,7 @@ class test:
         self.client = OpenAI()
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
-        self.max_prompts=1
+        self.max_docs=5
         self.df_file="output/df.file"
         pass
 
@@ -50,7 +50,7 @@ class test:
         pass
 
     # search function
-    def strings_ranked_by_relatedness(self,
+    def get_top_docs(self,
         query: str,
         n_prompts :int,
     ) -> tuple[list[str], list[float]]:
@@ -91,7 +91,7 @@ class test:
         print(tokens)
 
 
-    def prompt_build(self, query, n_prompts):
+    def prompt_build(self, query, n_docs):
         """Return a prompt for GPT, with relevant source texts pulled from a dataframe."""
         prompt=""
         # add introduction
@@ -101,7 +101,7 @@ class test:
 
         # add top N closes articles
         question = f"\n\nQuestion: {query}"
-        strings, relatedeness= self.strings_ranked_by_relatedness(query,n_prompts)
+        strings, relatedeness= self.get_top_docs(query,n_docs)
         # for i in range(len(strings)):
         #     print(relatedeness[i],strings[i][:50])
         for string in strings:
@@ -117,12 +117,12 @@ class test:
         prompt+=question
         return prompt
 
-    def ask(self,query,n_prompts) :
+    def ask(self,query,n_docs) :
         """Answers a query using GPT with/without prompts of additonal texts."""
-        if n_prompts >0 :
+        if n_docs >0 :
 
             # self.embedding_get()
-            prompt = self.prompt_build(query,n_prompts)
+            prompt = self.prompt_build(query,n_docs)
         else:
             prompt = query
 
@@ -138,17 +138,15 @@ class test:
             seed=1,
             # temperature=1
         )
-        return response.choices[0].message.content
+        answer=response.choices[0].message.content
+        print("n_docs ", n_docs, answer)
+        return answer
 
-    def comp(self):
+    def comp(self,query):
         differ = difflib.Differ()
-        query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-
         answers=[]
-        for n_prompts in range(self.max_prompts+1):
+        for n_prompts in range(0,self.max_docs+1):
             answer=t1.ask(query,n_prompts)
-            print("===== n_prompt = ", n_prompts, "\n",answer)
-
             with open("output/answer_"+str(n_prompts)+ ".txt" , "w" ) as file:
                 file.write(answer)
             answers.append(answer)
@@ -169,9 +167,11 @@ class test:
         time.sleep(5)
 
 t1=test()
-t1.embedding_get()
+# t1.embedding_get()
 t1.embedding_load()
-t1.comp()
+query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
+t1.comp(query)
+# t1.ask(query,n_docs=5)
 
 
 
