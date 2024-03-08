@@ -9,3 +9,5 @@
 --profiling
 python3 -m cProfile -o output/profile.txt t3_embedding_search.py
 snakeviz output/profile.txt
+
+--todo : study compare as n_docs 1 --> 5
