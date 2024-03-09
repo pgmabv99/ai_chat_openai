@@ -1,3 +1,4 @@
+# action log + todo
 -function call from model
 -embedding
 ---curlings  in 2022 games
@@ -6,12 +7,12 @@
 --- with N prompts results  men = canada, women= swiss
 --- CORRECT  from website   men=sweden , women =Great britain
 
---profiling
+- study compare as n_docs 1 --> 5
+- to use vector DB
+
+# profiling
 python3 -m cProfile -o output/profile.txt t3_embedding_search.py
 snakeviz output/profile.txt
-
---todo : study compare as n_docs 1 --> 5
-
 
 # performance
 - read remote CSV - 30sec
@@ -26,3 +27,7 @@ len of embedding df  6059
 2024-03-08 20:50:15.366799 starting  save to file pickle
 2024-03-08 20:50:15.890128 finished all
 ```
+
+# accuracy (seed=1 used)
+- adding 1 doc dds details
+- after 3 docs adding more does not change the answe
