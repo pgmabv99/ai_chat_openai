@@ -11,3 +11,18 @@ python3 -m cProfile -o output/profile.txt t3_embedding_search.py
 snakeviz output/profile.txt
 
 --todo : study compare as n_docs 1 --> 5
+
+
+# performance
+- read remote CSV - 30sec
+- convert to binary - 24
+- convert to textfile local - 7 sec
+- convert to pickle file local - 0.5 sec
+```
+2024-03-08 20:49:14.246253 starting to read remote csv
+2024-03-08 20:49:44.242880 starting to convert  csv
+len of embedding df  6059
+2024-03-08 20:50:08.115247 starting save to file csv
+2024-03-08 20:50:15.366799 starting  save to file pickle
+2024-03-08 20:50:15.890128 finished all
+```

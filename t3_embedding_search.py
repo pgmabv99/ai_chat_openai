@@ -1,3 +1,4 @@
+""" test OpenAI building of prompts using proximity search on related documents """
 # imports
 import ast  # for converting embeddings saved as strings back to arrays
 from openai import OpenAI # for calling the OpenAI API
@@ -7,9 +8,9 @@ import os # for getting API token from env variable OPENAI_API_KEY
 from scipy import spatial  # for calculating vector similarities for search
 from transformers import GPT2Tokenizer
 import difflib
-import time
-
-
+# import time
+from datetime import  datetime
+import os
 
 
 
@@ -26,7 +27,7 @@ class test:
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
         self.max_docs=5
-        self.df_file="output/df.file"
+        self.df_file="catalog/df.file"
         pass
 
 
@@ -34,16 +35,21 @@ class test:
     def embedding_get(self):
         # download pre-chunked text and pre-computed embeddings
         # this file is ~200 MB, so may take a minute depending on your connection speed
-        """get list of embedding for wiki from external site"""
+        """get list of embedding for wiki from external site and save it"""
+        print(datetime.now(),"starting to read remote csv")
         embeddings_path = "https://cdn.openai.com/API/examples/data/winter_olympics_2022.csv"
-
         self.df = pd.read_csv(embeddings_path)
+
+        print(datetime.now(),"starting to convert  csv")
         # convert embeddings from CSV str type back to list type
         self.df['embedding'] = self.df['embedding'].apply(ast.literal_eval)
-        # print(self.df.head(5))
         print("len of embedding df ", len(self.df))
-        # self.df.to_csv(self.df_csv, index=False)
+
+        # print(datetime.now(),"starting save to file csv")
+        # self.df.to_csv(self.df_file, index=False)
+        print(datetime.now(),"starting  save to file pickle")
         self.df.to_pickle(self.df_file)
+        print(datetime.now(),"finished all ")
         pass
     def embedding_load(self):
         self.df=pd.read_pickle(self.df_file)
@@ -91,8 +97,11 @@ class test:
         print(tokens)
 
 
-    def prompt_build(self, query, n_docs):
-        """Return a prompt for GPT, with relevant source texts pulled from a dataframe."""
+    def prompt_build(self,
+                     query,
+                     n_docs  # how many top docs to use . =0 -none
+                     ):
+        """Return a prompt for GPT, with relevant docs pulled from a dataframe."""
         prompt=""
         # add introduction
         introduction = 'Use the below articles on the 2022 Winter Olympics to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer."'
@@ -119,9 +128,8 @@ class test:
 
     def ask(self,query,n_docs) :
         """Answers a query using GPT with/without prompts of additonal texts."""
+        print(datetime.now(),"starting ask")
         if n_docs >0 :
-
-            # self.embedding_get()
             prompt = self.prompt_build(query,n_docs)
         else:
             prompt = query
@@ -140,38 +148,32 @@ class test:
         )
         answer=response.choices[0].message.content
         print("n_docs ", n_docs, answer)
+        print(datetime.now(),"end  ask")
         return answer
 
     def comp(self,query):
-        differ = difflib.Differ()
-        answers=[]
+        """ compare cae with variable number of docs"""
+        os.system("rm output/*")
         for n_prompts in range(0,self.max_docs+1):
             answer=t1.ask(query,n_prompts)
-            with open("output/answer_"+str(n_prompts)+ ".txt" , "w" ) as file:
+            with open("output/answer_"+str(n_prompts) , "w" ) as file:
                 file.write(answer)
-            answers.append(answer)
+            if n_prompts >0 :
+                command = ("diff" + " output/answer_"+ str(n_prompts) +
+                                    " output/answer_"+ str(n_prompts-1) +">"
+                                    + " output/diff" + str(n_prompts))
 
-            if n_prompts:
-                print("\n \n difference ============ with previous\n ", n_prompts  )
-                diff = list(differ.compare(answers[n_prompts].splitlines(),answers[n_prompts-1].splitlines()))
-                with open("output/diff_"+str(n_prompts)+ ".txt" , "w" ) as file:
-                    for line in  diff:
-                        print(line)
-                        file.write(line)
-
+                os.system(command)
         return
 
 
-    def test(self):
-        print("in test")
-        time.sleep(5)
 
 t1=test()
 # t1.embedding_get()
 t1.embedding_load()
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 t1.comp(query)
-# t1.ask(query,n_docs=5)
+# t1.ask(query,n_docs=1)
 
 
 
