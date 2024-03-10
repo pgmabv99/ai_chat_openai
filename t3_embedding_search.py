@@ -27,7 +27,7 @@ class test:
         self.client = OpenAI()
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
-        self.max_docs=5
+        self.max_docs=3
         self.df_file="catalog/df.file"
         pass
 
@@ -70,6 +70,8 @@ class test:
         self.df1["dist"]=self.df1.embedding.apply(lambda x :1 - spatial.distance.cosine(x, query_embedding))
         # sort and take highest
         self.df1=self.df1.sort_values("dist",ascending=False).head(n_prompts)
+        # random docs  ???
+        # self.df1=self.df1.sample(n=n_prompts,random_state=42)
 
         # save docs to disk
         import mwparserfromhell
