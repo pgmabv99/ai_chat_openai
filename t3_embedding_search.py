@@ -15,13 +15,14 @@ import os
 
 
 class test:
-    # EMBEDDING_MODEL = "text-embedding-ada-002"
-    #  operands could not be broadcast together with shapes (3072,) (1536,)
-    # EMBEDDING_MODEL = "text-embedding-3-large"
-    EMBEDDING_MODEL = "text-embedding-3-small"
+    EMBEDDING_MODEL = "text-embedding-ada-002"
+    # EMBEDDING_MODEL = "text-embedding-3-large"  # has too many dimensions compared to ada-002
+    # EMBEDDING_MODEL = "text-embedding-3-small"  # same dimansions but distance reversed  compared to ada-002
+
     # GPT_MODEL = "gpt-3.5-turbo"
     # GPT_MODEL = "gpt-4"
     GPT_MODEL = "gpt-4-turbo-preview"
+
     def __init__(self) -> None:
         self.client = OpenAI()
         self.token_budget = 4096 - 500
@@ -56,28 +57,34 @@ class test:
         pass
 
     # search function
+
     def get_top_docs(self,
-        query: str,
         n_prompts :int,
-    ) -> tuple[list[str], list[float]]:
+        query_embedding,
+    ):
+        """create df with top N docs."""
+        print(datetime.now(),"start  get_top_docs")
 
-        """Returns a list of strings and relatednesses, sorted from most related to least."""
-        query_embedding_response = self.client.embeddings.create(
-            model=test.EMBEDDING_MODEL,
-            input=query,
-        )
-        query_embedding = query_embedding_response.data[0].embedding
-        # relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y)
-        relatedness_fn=lambda x, y: spatial.distance.cosine(x, y)
-        strings_and_relatednesses = []
-        for i, row in self.df.iterrows():
-            dist=1-relatedness_fn(query_embedding, row["embedding"])
-            strings_and_relatednesses.append((row["text"],dist))
+        self.df1=self.df
+        # add column
+        self.df1["dist"]=self.df1.embedding.apply(lambda x :1 - spatial.distance.cosine(x, query_embedding))
+        # sort and take highest
+        self.df1=self.df1.sort_values("dist",ascending=False).head(n_prompts)
 
-        strings_and_relatednesses.sort(key=lambda x: x[1], reverse=True)
-        # list of pairs to pair of lists
-        strings, relatednesses = zip(*strings_and_relatednesses)
-        return strings[:n_prompts], relatednesses[:n_prompts]
+        # save docs to disk
+        import mwparserfromhell
+        docs=self.df1["text"].tolist()
+        dists=self.df1["dist"].tolist()
+        for i  in range(len(docs)):
+            string_wiki=mwparserfromhell.parse(docs[i])
+            string_text=string_wiki.strip_code()
+            string_list=string_text.split(".")
+            string_text="\n".join(string_list)
+            dist=str(round(dists[i],3))
+            with open("output/doc{}_{}".format(i, dist),"w")as f1:
+                f1.write(string_text)
+        print(datetime.now(),"end  get_top_docs")
+        return
 
     def get_num_tokens(self,
                    text: str
@@ -97,9 +104,8 @@ class test:
         print(tokens)
 
 
-    def prompt_build(self,
+    def prompt_build_from_docs(self,
                      query,
-                     n_docs  # how many top docs to use . =0 -none
                      ):
         """Return a prompt for GPT, with relevant docs pulled from a dataframe."""
         prompt=""
@@ -108,13 +114,11 @@ class test:
         introduction = ''
         prompt += introduction
 
-        # add top N closes articles
+        # add top N closest docs
         question = f"\n\nQuestion: {query}"
-        strings, relatedeness= self.get_top_docs(query,n_docs)
-        # for i in range(len(strings)):
-        #     print(relatedeness[i],strings[i][:50])
-        for string in strings:
-            next_article = f'\n\nWikipedia article section:\n"""\n{string}\n"""'
+        docs=self.df1["text"]
+        for doc in docs:
+            next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
             num_tokens=self.get_num_tokens(prompt+ question + next_article)
             if (num_tokens> self.token_budget):
                 print("budget exceeded :", num_tokens)
@@ -127,10 +131,16 @@ class test:
         return prompt
 
     def ask(self,query,n_docs) :
-        """Answers a query using GPT with/without prompts of additonal texts."""
+        """Answers a query using GPT n_docs of    additonal docs."""
         print(datetime.now(),"starting ask")
         if n_docs >0 :
-            prompt = self.prompt_build(query,n_docs)
+            query_embedding_response = self.client.embeddings.create(
+                model=test.EMBEDDING_MODEL,
+                input=query,
+            )
+            query_embedding = query_embedding_response.data[0].embedding
+            self.get_top_docs(n_docs, query_embedding)
+            prompt = self.prompt_build_from_docs(query)
         else:
             prompt = query
 
@@ -147,17 +157,16 @@ class test:
             # temperature=1
         )
         answer=response.choices[0].message.content
-        print("n_docs ", n_docs, answer)
         print(datetime.now(),"end  ask")
         return answer
 
     def comp(self,query):
-        """ compare cae with variable number of docs"""
+        """ compare experiments  with variable number of docs"""
         os.system("rm output/*")
         for n_prompts in range(0,self.max_docs+1):
             answer=t1.ask(query,n_prompts)
             with open("output/answer_"+str(n_prompts) , "w" ) as file:
-                file.write(answer)
+                file.write(answer+"\n")
             if n_prompts >0 :
                 command = ("diff" + " output/answer_"+ str(n_prompts) +
                                     " output/answer_"+ str(n_prompts-1) +">"
@@ -173,7 +182,7 @@ t1=test()
 t1.embedding_load()
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 t1.comp(query)
-# t1.ask(query,n_docs=1)
+# print(t1.ask(query,n_docs=1))
 
 
 

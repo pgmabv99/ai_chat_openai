@@ -8,7 +8,11 @@
 --- CORRECT  from website   men=sweden , women =Great britain
 
 - study compare as n_docs 1 --> 5
-- to use vector DB
+- switch to compatible models
+- refactor
+
+- TODO use vector DB
+-
 
 # profiling
 python3 -m cProfile -o output/profile.txt t3_embedding_search.py
@@ -19,6 +23,7 @@ snakeviz output/profile.txt
 - convert to binary - 24
 - convert to textfile local - 7 sec
 - convert to pickle file local - 0.5 sec
+- resort/filter  df - 0.5 sec vs vector ???
 ```
 2024-03-08 20:49:14.246253 starting to read remote csv
 2024-03-08 20:49:44.242880 starting to convert  csv
@@ -29,5 +34,18 @@ len of embedding df  6059
 ```
 
 # accuracy (seed=1 used)
-- adding 1 doc dds details
-- after 3 docs adding more does not change the answe
+- question "Which athletes won the gold medal in curling at the 2022 Winter Olympics?
+- 0 doc -  Basic info :   just teams listed correctly with recent model  gpt-4-turbo-preview
+- adding 1 doc   add details such as team members
+- more  docs   does not change the answer, just different synonym (consisting/including) and different placement of the countryname
+
+# model compatability (gotcha)
+- cannot compare embdedding from different models
+    ```
+    EMBEDDING_MODEL = "text-embedding-ada-002"
+    # EMBEDDING_MODEL = "text-embedding-3-large"  # has too many dimensions compared to ada-002
+    # EMBEDDING_MODEL = "text-embedding-3-small"  # same dimansions but distance reversed  compared to ada-002
+    ```
+
+# references
+https://cookbook.openai.com/examples/question_answering_using_embeddings
