@@ -4,13 +4,14 @@ import ast  # for converting embeddings saved as strings back to arrays
 from openai import OpenAI # for calling the OpenAI API
 import pandas as pd  # for storing text and embeddings data
 import tiktoken  # for counting tokens
-import os # for getting API token from env variable OPENAI_API_KEY
 from scipy import spatial  # for calculating vector similarities for search
 from transformers import GPT2Tokenizer
-import difflib
-# import time
+
 from datetime import  datetime
 import os
+import shutil
+
+
 
 
 
@@ -29,6 +30,8 @@ class test:
         # self.token_budget =  10**5
         self.max_docs=3
         self.df_file="catalog/df.file"
+        self.df_file_split="catalog/df_split.file"
+        self.docs_dir = 'catalog/docs'
         pass
 
 
@@ -52,8 +55,28 @@ class test:
         self.df.to_pickle(self.df_file)
         print(datetime.now(),"finished all ")
         pass
-    def embedding_load(self):
+
+    def util_get_doc_filename(self,i,file_ids):
+        file_id=file_ids[i]
+        return self.docs_dir +"/" +str(file_id).zfill(5)
+
+    def embedding_split(self):
         self.df=pd.read_pickle(self.df_file)
+        self.df_split=pd.DataFrame({"embedding": self.df["embedding"].copy(),"file_id":self.df.index})
+        self.df_split.to_pickle(self.df_file_split)
+
+        # Re-create the doc folder
+        if os.path.exists(self.docs_dir):
+            shutil.rmtree(self.docs_dir)
+        os.makedirs(self.docs_dir)
+        for i, doc in self.df["text"].items():
+            with open(self.util_get_doc_filename(i), "w") as f1:
+                f1.write(doc +"\n")
+
+        return
+
+    def embedding_load(self):
+        self.df=pd.read_pickle(self.df_file_split)
         pass
 
     # search function
@@ -73,17 +96,19 @@ class test:
         # random docs  ???
         # self.df1=self.df1.sample(n=n_prompts,random_state=42)
 
-        # save docs to disk
+        # copy  docs to disk
         import mwparserfromhell
-        docs=self.df1["text"].tolist()
         dists=self.df1["dist"].tolist()
-        for i  in range(len(docs)):
-            string_wiki=mwparserfromhell.parse(docs[i])
+        file_ids=self.df1["file_id"].tolist()
+        for i  in range(n_prompts):
+            with open(self.util_get_doc_filename(i, file_ids)) as f1:
+                doc=f1.read()
+            string_wiki=mwparserfromhell.parse(doc)
             string_text=string_wiki.strip_code()
             string_list=string_text.split(".")
             string_text="\n".join(string_list)
             dist=str(round(dists[i],3))
-            with open("output/doc{}_{}".format(i, dist),"w")as f1:
+            with open("output/doc{}_{}_{}".format(i,file_ids[i] ,dist),"w")as f1:
                 f1.write(string_text)
         print(datetime.now(),"end  get_top_docs")
         return
@@ -108,6 +133,7 @@ class test:
 
     def prompt_build_from_docs(self,
                      query,
+                     n_docs,
                      ):
         """Return a prompt for GPT, with relevant docs pulled from a dataframe."""
         prompt=""
@@ -118,15 +144,17 @@ class test:
 
         # add top N closest docs
         question = f"\n\nQuestion: {query}"
-        docs=self.df1["text"]
-        for doc in docs:
-            next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
-            num_tokens=self.get_num_tokens(prompt+ question + next_article)
-            if (num_tokens> self.token_budget):
-                print("budget exceeded :", num_tokens)
-                break
-            else:
-                prompt += next_article
+        file_ids=self.df1["file_id"].tolist()
+        for i in range(n_docs):
+            with open(self.util_get_doc_filename(i,file_ids)) as f1:
+                doc=f1.read()
+                next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
+                num_tokens=self.get_num_tokens(prompt+ question + next_article)
+                if (num_tokens> self.token_budget):
+                    print("budget exceeded :", num_tokens)
+                    break
+                else:
+                    prompt += next_article
 
         # add user question
         prompt+=question
@@ -142,7 +170,7 @@ class test:
             )
             query_embedding = query_embedding_response.data[0].embedding
             self.get_top_docs(n_docs, query_embedding)
-            prompt = self.prompt_build_from_docs(query)
+            prompt = self.prompt_build_from_docs(query,n_docs)
         else:
             prompt = query
 
@@ -180,7 +208,10 @@ class test:
 
 
 t1=test()
+
 # t1.embedding_get()
+# t1.embedding_split()
+
 t1.embedding_load()
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 t1.comp(query)

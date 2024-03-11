@@ -32,6 +32,11 @@ len of embedding df  6059
 2024-03-08 20:50:15.366799 starting  save to file pickle
 2024-03-08 20:50:15.890128 finished all
 ```
+- lremoving large pd columns with text does not affect sort speed
+```
+    with large column in sort 2.293	0.7642	t3_embedding_search.py:84(get_top_docs)
+    without largecolu 2.35	0.7832	t3_embedding_search.py:84(get_top_docs)
+```
 
 # accuracy (seed=1 used)
 - question "Which athletes won the gold medal in curling at the 2022 Winter Olympics?
