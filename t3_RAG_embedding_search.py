@@ -3,16 +3,21 @@
 import ast  # for converting embeddings saved as strings back to arrays
 from openai import OpenAI # for calling the OpenAI API
 import pandas as pd  # for storing text and embeddings data
+import numpy as np    #for faiss
+
 import tiktoken  # for counting tokens
 from scipy import spatial  # for calculating vector similarities for search
 from transformers import GPT2Tokenizer
+import faiss
 
 from datetime import  datetime
 import os
 import shutil
 
-
-
+# utilities from py_utz
+from utz import utz
+# from utz import my_decorator
+# from utzexc import UtzExc
 
 
 class test:
@@ -56,10 +61,10 @@ class test:
         print(datetime.now(),"finished all ")
         pass
 
-    def util_get_doc_filename(self,i,file_ids):
-        file_id=file_ids[i]
+    def util_get_doc_filename(self,file_id):
         return self.docs_dir +"/" +str(file_id).zfill(5)
 
+    @utz.time_decorator
     def embedding_split(self):
         self.df=pd.read_pickle(self.df_file)
         self.df_split=pd.DataFrame({"embedding": self.df["embedding"].copy(),"file_id":self.df.index})
@@ -69,10 +74,28 @@ class test:
         if os.path.exists(self.docs_dir):
             shutil.rmtree(self.docs_dir)
         os.makedirs(self.docs_dir)
-        for i, doc in self.df["text"].items():
-            with open(self.util_get_doc_filename(i), "w") as f1:
+        for file_id, doc in self.df["text"].items():
+            with open(self.util_get_doc_filename(file_id), "w") as f1:
                 f1.write(doc +"\n")
 
+        return
+
+    @utz.time_decorator
+    def embedding_to_faiss(self):
+        self.df=pd.read_pickle(self.df_file_split)
+        # convert to numpy
+        embeds_list=[]
+        len_embeds=0
+        for irow, row in self.df.iterrows():
+            embeds=row["embedding"]
+            len_embeds=len(embeds)
+            embeds_list.append(embeds)
+        self.np=np.array(embeds_list)
+        # build and load inded
+        self.index = faiss.IndexFlatL2(len_embeds)  # L2 distance index
+        self.index.add(self.np)
+        print("index stats", self.index.ntotal)
+        faiss.write_index(self.index, "catalog/faiss.index")
         return
 
     def embedding_load(self):
@@ -80,13 +103,12 @@ class test:
         pass
 
     # search function
-
+    @utz.time_decorator
     def get_top_docs(self,
         n_prompts :int,
         query_embedding,
     ):
         """create df with top N docs."""
-        print(datetime.now(),"start  get_top_docs")
 
         self.df1=self.df
         # add column
@@ -101,7 +123,7 @@ class test:
         dists=self.df1["dist"].tolist()
         file_ids=self.df1["file_id"].tolist()
         for i  in range(n_prompts):
-            with open(self.util_get_doc_filename(i, file_ids)) as f1:
+            with open(self.util_get_doc_filename(file_ids[i])) as f1:
                 doc=f1.read()
             string_wiki=mwparserfromhell.parse(doc)
             string_text=string_wiki.strip_code()
@@ -110,7 +132,6 @@ class test:
             dist=str(round(dists[i],3))
             with open("output/doc{}_{}_{}".format(i,file_ids[i] ,dist),"w")as f1:
                 f1.write(string_text)
-        print(datetime.now(),"end  get_top_docs")
         return
 
     def get_num_tokens(self,
@@ -146,7 +167,7 @@ class test:
         question = f"\n\nQuestion: {query}"
         file_ids=self.df1["file_id"].tolist()
         for i in range(n_docs):
-            with open(self.util_get_doc_filename(i,file_ids)) as f1:
+            with open(self.util_get_doc_filename(file_ids[i])) as f1:
                 doc=f1.read()
                 next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
                 num_tokens=self.get_num_tokens(prompt+ question + next_article)
@@ -160,9 +181,9 @@ class test:
         prompt+=question
         return prompt
 
+    @utz.time_decorator
     def ask(self,query,n_docs) :
         """Answers a query using GPT n_docs of    additonal docs."""
-        print(datetime.now(),"starting ask")
         if n_docs >0 :
             query_embedding_response = self.client.embeddings.create(
                 model=test.EMBEDDING_MODEL,
@@ -187,7 +208,6 @@ class test:
             # temperature=1
         )
         answer=response.choices[0].message.content
-        print(datetime.now(),"end  ask")
         return answer
 
     def comp(self,query):
@@ -211,6 +231,11 @@ t1=test()
 
 # t1.embedding_get()
 # t1.embedding_split()
+
+# t1.embedding_split()
+t1.embedding_to_faiss()
+exit()
+
 
 t1.embedding_load()
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'

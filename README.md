@@ -10,8 +10,8 @@
 - study compare as n_docs 1 --> 5
 - switch to compatible models
 - refactor
-
-- TODO use vector DB
+--- build faiss inded
+- TODO use index search 
 -
 
 # profiling
@@ -54,3 +54,18 @@ len of embedding df  6059
 
 # references
 https://cookbook.openai.com/examples/question_answering_using_embeddings
+
+# conda
+curl -O https://repo.anaconda.com/archive/Anaconda3-<INSTALLER_VERSION>-Linux-x86_64.sh
+
+curl -O  https://repo.anaconda.com/archive/Anaconda3-2024.02-1-Linux-x86_64.sh
+
+installation finished.
+Do you wish to update your shell profile to automatically initialize conda?
+This will activate conda on startup and change the command prompt when activated.
+If you'd prefer that conda's base environment not be activated on startup,
+   run the following command when conda is activated:
+
+conda config --set auto_activate_base false
+
+You can undo this by running `conda init --reverse $SHELL`? [yes|no]
