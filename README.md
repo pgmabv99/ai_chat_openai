@@ -11,7 +11,7 @@
 - switch to compatible models
 - refactor
 --- build faiss inded
-- TODO use index search 
+- TODO use index search
 -
 
 # profiling
@@ -36,6 +36,15 @@ len of embedding df  6059
 ```
     with large column in sort 2.293	0.7642	t3_embedding_search.py:84(get_top_docs)
     without largecolu 2.35	0.7832	t3_embedding_search.py:84(get_top_docs)
+```
+- comparison of pd sort/filter with faiss vector
+```
+    faiss - get_top_docs     :seconds= 0.011538
+        dists [0.21607781946659088, 0.22231340408325195, 0.2250508964061737]
+        file_ids [3091, 2523, 2507]
+    pd -sort get_top_docs     :seconds= 0.661772
+        dists [0.10798799787655144, 0.11115774799845979, 0.11248300931670996]
+        file_ids [3091, 2523, 2507]
 ```
 
 # accuracy (seed=1 used)

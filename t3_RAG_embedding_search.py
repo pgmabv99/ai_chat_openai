@@ -13,12 +13,10 @@ import faiss
 from datetime import  datetime
 import os
 import shutil
+import mwparserfromhell
 
 # utilities from py_utz
 from utz import utz
-# from utz import my_decorator
-# from utzexc import UtzExc
-
 
 class test:
     EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -30,6 +28,7 @@ class test:
     GPT_MODEL = "gpt-4-turbo-preview"
 
     def __init__(self) -> None:
+        utz.logset()
         self.client = OpenAI()
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
@@ -37,28 +36,22 @@ class test:
         self.df_file="catalog/df.file"
         self.df_file_split="catalog/df_split.file"
         self.docs_dir = 'catalog/docs'
+        self.faiss_fn="catalog/faiss.index"
         pass
 
 
-
+    @utz.time_decorator
     def embedding_get(self):
         # download pre-chunked text and pre-computed embeddings
         # this file is ~200 MB, so may take a minute depending on your connection speed
         """get list of embedding for wiki from external site and save it"""
-        print(datetime.now(),"starting to read remote csv")
         embeddings_path = "https://cdn.openai.com/API/examples/data/winter_olympics_2022.csv"
         self.df = pd.read_csv(embeddings_path)
 
-        print(datetime.now(),"starting to convert  csv")
         # convert embeddings from CSV str type back to list type
         self.df['embedding'] = self.df['embedding'].apply(ast.literal_eval)
-        print("len of embedding df ", len(self.df))
-
-        # print(datetime.now(),"starting save to file csv")
-        # self.df.to_csv(self.df_file, index=False)
-        print(datetime.now(),"starting  save to file pickle")
+        utz.print("len of embedding df ", len(self.df))
         self.df.to_pickle(self.df_file)
-        print(datetime.now(),"finished all ")
         pass
 
     def util_get_doc_filename(self,file_id):
@@ -66,6 +59,7 @@ class test:
 
     @utz.time_decorator
     def embedding_split(self):
+        """ split df . move text column to a folder with files"""
         self.df=pd.read_pickle(self.df_file)
         self.df_split=pd.DataFrame({"embedding": self.df["embedding"].copy(),"file_id":self.df.index})
         self.df_split.to_pickle(self.df_file_split)
@@ -82,6 +76,7 @@ class test:
 
     @utz.time_decorator
     def embedding_to_faiss(self):
+        """build and save faiss indes"""
         self.df=pd.read_pickle(self.df_file_split)
         # convert to numpy
         embeds_list=[]
@@ -92,15 +87,30 @@ class test:
             embeds_list.append(embeds)
         self.np=np.array(embeds_list)
         # build and load inded
-        self.index = faiss.IndexFlatL2(len_embeds)  # L2 distance index
-        self.index.add(self.np)
-        print("index stats", self.index.ntotal)
-        faiss.write_index(self.index, "catalog/faiss.index")
+        self.faiss = faiss.IndexFlatL2(len_embeds)  # L2 distance index
+        self.faiss.add(self.np)
+        utz.print("index stats", self.faiss.ntotal)
+        faiss.write_index(self.faiss,  self.faiss_fn)
         return
 
     def embedding_load(self):
         self.df=pd.read_pickle(self.df_file_split)
+        self.faiss=faiss.read_index(self.faiss_fn)
         pass
+
+    def copy_top_docs(self, n_prompts):
+        """ copy to docs for ease of check"""
+        for i  in range(n_prompts):
+            with open(self.util_get_doc_filename(self.file_ids[i])) as f1:
+                doc=f1.read()
+            string_wiki=mwparserfromhell.parse(doc)
+            string_text=string_wiki.strip_code()
+            string_list=string_text.split(".")
+            string_text="\n".join(string_list)
+            dist=str(round(self.dists[i],3))
+            with open("output/doc{}_{}_{}".format(i,self.file_ids[i] ,dist),"w")as f1:
+                f1.write(string_text)
+        return
 
     # search function
     @utz.time_decorator
@@ -109,29 +119,31 @@ class test:
         query_embedding,
     ):
         """create df with top N docs."""
+        use_faiss=True
+        # use_faiss=False
+        utz.print("using faiss", use_faiss)
+        if  use_faiss:
+            np_temp = np.array(query_embedding)
+            # Reshape the array to have a single row
+            np_temp2 = np_temp.reshape(1, -1)
+            temp_dists, temp_file_ids = self.faiss.search(np_temp2, n_prompts)
+            self.dists=temp_dists[0].tolist()
+            self.file_ids=temp_file_ids[0].tolist()
+        else:
+            self.df1=self.df
+            # add column
+            self.df1["dist"]=self.df1.embedding.apply(lambda x : spatial.distance.cosine(x, query_embedding))
+            # sort and take highest
+            self.df1=self.df1.sort_values("dist",ascending=True).head(n_prompts)
+            # copy  docs to disk
+            self.dists=self.df1["dist"].tolist()
+            self.file_ids=self.df1["file_id"].tolist()
 
-        self.df1=self.df
-        # add column
-        self.df1["dist"]=self.df1.embedding.apply(lambda x :1 - spatial.distance.cosine(x, query_embedding))
-        # sort and take highest
-        self.df1=self.df1.sort_values("dist",ascending=False).head(n_prompts)
-        # random docs  ???
-        # self.df1=self.df1.sample(n=n_prompts,random_state=42)
 
-        # copy  docs to disk
-        import mwparserfromhell
-        dists=self.df1["dist"].tolist()
-        file_ids=self.df1["file_id"].tolist()
-        for i  in range(n_prompts):
-            with open(self.util_get_doc_filename(file_ids[i])) as f1:
-                doc=f1.read()
-            string_wiki=mwparserfromhell.parse(doc)
-            string_text=string_wiki.strip_code()
-            string_list=string_text.split(".")
-            string_text="\n".join(string_list)
-            dist=str(round(dists[i],3))
-            with open("output/doc{}_{}_{}".format(i,file_ids[i] ,dist),"w")as f1:
-                f1.write(string_text)
+        self.copy_top_docs(n_prompts)
+        utz.print("dists",self.dists)
+        utz.print("file_ids",self.file_ids)
+
         return
 
     def get_num_tokens(self,
@@ -141,15 +153,13 @@ class test:
         encoding = tiktoken.encoding_for_model(test.GPT_MODEL)
         tokens=encoding.encode(text)
         num_tokens=len(tokens)
-        # print("====num_tokens", num_tokens)
-        # print(tokens)
         return num_tokens
 
     def get_real_tokens_gpt2(self,text):
         # Load the GPT-2 tokenizer
         tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         tokens = tokenizer.tokenize(text)
-        print(tokens)
+        utz.print(tokens)
 
 
     def prompt_build_from_docs(self,
@@ -165,14 +175,13 @@ class test:
 
         # add top N closest docs
         question = f"\n\nQuestion: {query}"
-        file_ids=self.df1["file_id"].tolist()
         for i in range(n_docs):
-            with open(self.util_get_doc_filename(file_ids[i])) as f1:
+            with open(self.util_get_doc_filename(self.file_ids[i])) as f1:
                 doc=f1.read()
                 next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
                 num_tokens=self.get_num_tokens(prompt+ question + next_article)
                 if (num_tokens> self.token_budget):
-                    print("budget exceeded :", num_tokens)
+                    utz.print("budget exceeded :", num_tokens)
                     break
                 else:
                     prompt += next_article
@@ -231,16 +240,14 @@ t1=test()
 
 # t1.embedding_get()
 # t1.embedding_split()
+# t1.embedding_to_faiss()
 
-# t1.embedding_split()
-t1.embedding_to_faiss()
-exit()
 
+query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
+# utz.print(t1.ask(query,n_docs=1))
 
 t1.embedding_load()
-query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
 t1.comp(query)
-# print(t1.ask(query,n_docs=1))
 
 
 
