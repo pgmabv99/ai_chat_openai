@@ -240,14 +240,23 @@ t1=test()
 
 # t1.embedding_get()
 # t1.embedding_split()
-# t1.embedding_to_faiss()
+t1.embedding_to_faiss()
 
 
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-# utz.print(t1.ask(query,n_docs=1))
+answer=t1.ask(query,n_docs=0)
+utz.print(answer)
 
-t1.embedding_load()
-t1.comp(query)
+query = answer + ' show only men'
+answer=t1.ask(query,n_docs=0)
+utz.print(answer)
+
+query = answer + ' now show only women'
+answer=t1.ask(query,n_docs=0)
+utz.print(answer)
+
+# t1.embedding_load()
+# t1.comp(query)
 
 
 
