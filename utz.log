@@ -1,16 +1,33 @@
-2024-04-19 13:36:26.114773 enter: embedding_to_faiss
-2024-04-19 13:36:26.942936 index stats 6059
-2024-04-19 13:36:26.964284 exit : embedding_to_faiss :seconds= 0.849421
-2024-04-19 13:36:26.964492 enter: ask             
-2024-04-19 13:36:32.507477 exit : ask              :seconds= 5.54284
-2024-04-19 13:36:32.508114 At the 2022 Winter Olympics, the gold medals in curling were won by the following teams:
+2024-05-06 14:13:01.852684 enter: embedding_to_faiss
+2024-05-06 14:13:02.866067 index stats 6059
+2024-05-06 14:13:02.889116 exit : embedding_to_faiss :seconds= 1.036344
+2024-05-06 14:13:02.889277 enter: ask             
+2024-05-06 14:13:07.480932 exit : ask              :seconds= 4.591472
+2024-05-06 14:13:07.481342 At the 2022 Winter Olympics, the gold medals in curling were won by the following teams:
 
 - **Men's Curling**: The Swedish team, skipped by Niklas Edin, won the gold medal.
 - **Women's Curling**: The Great Britain team, skipped by Eve Muirhead, won the gold medal.
 - **Mixed Doubles Curling**: The Italian team, consisting of Stefania Constantini and Amos Mosaner, won the gold medal.
-2024-04-19 13:36:32.508505 enter: ask             
-2024-04-19 13:36:34.355610 exit : ask              :seconds= 1.847035
-2024-04-19 13:36:34.355993 At the 2022 Winter Olympics, the gold medal in Men's Curling was won by the Swedish team, skipped by Niklas Edin.
-2024-04-19 13:36:34.356200 enter: ask             
-2024-04-19 13:36:38.058778 exit : ask              :seconds= 3.702494
-2024-04-19 13:36:38.059169 Yes, the Swedish men's curling team, led by skip Niklas Edin, won the gold medal at the 2022 Winter Olympics. If you're interested in the women's curling event at the same Olympics, the gold medal in Women's Curling was won by the team from Great Britain, skipped by Eve Muirhead.
+2024-05-06 14:13:07.488052 enter: ask             
+2024-05-06 14:13:12.450461 exit : ask              :seconds= 4.962418
+2024-05-06 14:13:12.451175 enter: ask             
+2024-05-06 14:13:12.757745 enter: get_top_docs    
+2024-05-06 14:13:12.758143 using faiss True
+2024-05-06 14:13:12.886065 dists [0.2161760926246643]
+2024-05-06 14:13:12.886166 file_ids [3091]
+2024-05-06 14:13:12.886252 exit : get_top_docs     :seconds= 0.128675
+2024-05-06 14:13:20.536917 exit : ask              :seconds= 8.085833
+2024-05-06 14:13:20.540246 enter: ask             
+2024-05-06 14:13:20.724159 enter: get_top_docs    
+2024-05-06 14:13:20.724567 using faiss True
+2024-05-06 14:13:20.743166 dists [0.2161760926246643, 0.2224203646183014]
+2024-05-06 14:13:20.743285 file_ids [3091, 2523]
+2024-05-06 14:13:20.743361 exit : get_top_docs     :seconds= 0.019369
+2024-05-06 14:13:28.220164 exit : ask              :seconds= 7.67974
+2024-05-06 14:13:28.227189 enter: ask             
+2024-05-06 14:13:28.395997 enter: get_top_docs    
+2024-05-06 14:13:28.396402 using faiss True
+2024-05-06 14:13:28.539357 dists [0.2161760926246643, 0.2224203646183014, 0.22512921690940857]
+2024-05-06 14:13:28.539520 file_ids [3091, 2523, 2507]
+2024-05-06 14:13:28.539662 exit : get_top_docs     :seconds= 0.143764
+2024-05-06 14:13:36.209429 exit : ask              :seconds= 7.982229

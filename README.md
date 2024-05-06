@@ -15,6 +15,7 @@
 -
 
 # profiling
+# no import , just pip install
 python3 -m cProfile -o output/profile.txt t3_embedding_search.py
 snakeviz output/profile.txt
 
