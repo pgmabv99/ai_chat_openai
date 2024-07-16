@@ -240,8 +240,10 @@ class test:
 
 t1=test()
 
-# t1.embedding_get_from_samples()
-# t1.embedding_split()
+load_from_samples=False
+if load_from_samples:
+    t1.embedding_get_from_samples()
+    t1.embedding_split()
 
 # t1.use_faiss=False
 t1.use_faiss=True
