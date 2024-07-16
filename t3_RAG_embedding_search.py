@@ -75,27 +75,29 @@ class test:
         return
 
     @utz.time_decorator
-    def embedding_to_faiss(self):
+    def embedding_split_to_faiss(self):
         """build and save faiss indes"""
-        self.df=pd.read_pickle(self.df_file_split)
-        # convert to numpy
+        df_temp=pd.read_pickle(self.df_file_split)
+        # convert to list
         embeds_list=[]
         len_embeds=0
-        for irow, row in self.df.iterrows():
+        for _, row in df_temp.iterrows():
             embeds=row["embedding"]
+            # assume equal length for all embeds???
             len_embeds=len(embeds)
             embeds_list.append(embeds)
-        self.np=np.array(embeds_list)
+        # convert to numpy
+        embeds_np=np.array(embeds_list)
         # build and load inded
-        self.faiss = faiss.IndexFlatL2(len_embeds)  # L2 distance index
-        self.faiss.add(self.np)
-        utz.print("index stats", self.faiss.ntotal)
-        faiss.write_index(self.faiss,  self.faiss_fn)
+        self.faiss_index = faiss.IndexFlatL2(len_embeds)  # L2 distance index
+        self.faiss_index.add(embeds_np)
+        utz.print("index stats", self.faiss_index.ntotal)
+        faiss.write_index(self.faiss_index,  self.faiss_fn)
         return
 
     def embedding_load(self):
         self.df=pd.read_pickle(self.df_file_split)
-        self.faiss=faiss.read_index(self.faiss_fn)
+        self.faiss_index=faiss.read_index(self.faiss_fn)
         pass
 
     def copy_top_docs(self, n_prompts):
@@ -121,15 +123,17 @@ class test:
         """create df with top N docs."""
         use_faiss=True
         # use_faiss=False
-        utz.print("using faiss", use_faiss)
         if  use_faiss:
-            np_temp = np.array(query_embedding)
-            # Reshape the array to have a single row
-            np_temp2 = np_temp.reshape(1, -1)
-            temp_dists, temp_file_ids = self.faiss.search(np_temp2, n_prompts)
+            utz.print("using faiss", use_faiss)
+            # 1 dim arrary
+            query_embedding_np = np.array(query_embedding)
+            # for faiss Reshape the array to 2 dim arrary  with a _single_ row equal to original 1 dim 
+            query_embedding_2dim = query_embedding_np.reshape(1, -1)
+            temp_dists, temp_ids = self.faiss_index.search(query_embedding_2dim, n_prompts)
             self.dists=temp_dists[0].tolist()
-            self.file_ids=temp_file_ids[0].tolist()
+            self.file_ids=temp_ids[0].tolist()
         else:
+            utz.print("using cosine as lambda", use_faiss)
             self.df1=self.df
             # add column
             self.df1["dist"]=self.df1.embedding.apply(lambda x : spatial.distance.cosine(x, query_embedding))
@@ -240,11 +244,11 @@ t1=test()
 
 # t1.embedding_get()
 # t1.embedding_split()
-t1.embedding_to_faiss()
+t1.embedding_split_to_faiss()
 
 
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-answer=t1.ask(query,n_docs=0)
+answer=t1.ask(query,n_docs=1)
 utz.print(answer)
 
 # query = answer + ' show only men'
@@ -256,7 +260,7 @@ utz.print(answer)
 # utz.print(answer)
 
 # t1.embedding_load()
-t1.comp(query)
+# t1.comp(query)
 
 
 

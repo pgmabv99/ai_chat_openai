@@ -1,33 +1,15 @@
-2024-05-06 14:13:01.852684 enter: embedding_to_faiss
-2024-05-06 14:13:02.866067 index stats 6059
-2024-05-06 14:13:02.889116 exit : embedding_to_faiss :seconds= 1.036344
-2024-05-06 14:13:02.889277 enter: ask             
-2024-05-06 14:13:07.480932 exit : ask              :seconds= 4.591472
-2024-05-06 14:13:07.481342 At the 2022 Winter Olympics, the gold medals in curling were won by the following teams:
+2024-07-16 12:16:12.185929 enter: embedding_split_to_faiss
+2024-07-16 12:16:13.340703 index stats 6059
+2024-07-16 12:16:13.438449 exit : embedding_split_to_faiss :seconds= 1.252538
+2024-07-16 12:16:13.438644 enter: ask             
+2024-07-16 12:16:13.735730 enter: get_top_docs    
+2024-07-16 12:16:18.478400 using faiss True
+2024-07-16 12:37:07.844243 dists [0.21597599983215332]
+2024-07-16 12:37:07.844485 file_ids [3091]
+2024-07-16 12:37:07.845125 exit : get_top_docs     :seconds= 1254.109564
+2024-07-16 12:37:16.509677 exit : ask              :seconds= 1263.071041
+2024-07-16 12:37:16.510203 The athletes who won the gold medal in curling at the 2022 Winter Olympics are:
 
-- **Men's Curling**: The Swedish team, skipped by Niklas Edin, won the gold medal.
-- **Women's Curling**: The Great Britain team, skipped by Eve Muirhead, won the gold medal.
-- **Mixed Doubles Curling**: The Italian team, consisting of Stefania Constantini and Amos Mosaner, won the gold medal.
-2024-05-06 14:13:07.488052 enter: ask             
-2024-05-06 14:13:12.450461 exit : ask              :seconds= 4.962418
-2024-05-06 14:13:12.451175 enter: ask             
-2024-05-06 14:13:12.757745 enter: get_top_docs    
-2024-05-06 14:13:12.758143 using faiss True
-2024-05-06 14:13:12.886065 dists [0.2161760926246643]
-2024-05-06 14:13:12.886166 file_ids [3091]
-2024-05-06 14:13:12.886252 exit : get_top_docs     :seconds= 0.128675
-2024-05-06 14:13:20.536917 exit : ask              :seconds= 8.085833
-2024-05-06 14:13:20.540246 enter: ask             
-2024-05-06 14:13:20.724159 enter: get_top_docs    
-2024-05-06 14:13:20.724567 using faiss True
-2024-05-06 14:13:20.743166 dists [0.2161760926246643, 0.2224203646183014]
-2024-05-06 14:13:20.743285 file_ids [3091, 2523]
-2024-05-06 14:13:20.743361 exit : get_top_docs     :seconds= 0.019369
-2024-05-06 14:13:28.220164 exit : ask              :seconds= 7.67974
-2024-05-06 14:13:28.227189 enter: ask             
-2024-05-06 14:13:28.395997 enter: get_top_docs    
-2024-05-06 14:13:28.396402 using faiss True
-2024-05-06 14:13:28.539357 dists [0.2161760926246643, 0.2224203646183014, 0.22512921690940857]
-2024-05-06 14:13:28.539520 file_ids [3091, 2523, 2507]
-2024-05-06 14:13:28.539662 exit : get_top_docs     :seconds= 0.143764
-2024-05-06 14:13:36.209429 exit : ask              :seconds= 7.982229
+- **Men's Tournament**: Niklas Edin, Oskar Eriksson, Rasmus Wranå, Christoffer Sundgren, Daniel Magnusson (Sweden)
+- **Women's Tournament**: Eve Muirhead, Vicky Wright, Jennifer Dodds, Hailey Duff, Mili Smith (Great Britain)
+- **Mixed Doubles Tournament**: Stefania Constantini, Amos Mosaner (Italy)
