@@ -1,15 +1,20 @@
-2024-07-16 12:16:12.185929 enter: embedding_split_to_faiss
-2024-07-16 12:16:13.340703 index stats 6059
-2024-07-16 12:16:13.438449 exit : embedding_split_to_faiss :seconds= 1.252538
-2024-07-16 12:16:13.438644 enter: ask             
-2024-07-16 12:16:13.735730 enter: get_top_docs    
-2024-07-16 12:16:18.478400 using faiss True
-2024-07-16 12:37:07.844243 dists [0.21597599983215332]
-2024-07-16 12:37:07.844485 file_ids [3091]
-2024-07-16 12:37:07.845125 exit : get_top_docs     :seconds= 1254.109564
-2024-07-16 12:37:16.509677 exit : ask              :seconds= 1263.071041
-2024-07-16 12:37:16.510203 The athletes who won the gold medal in curling at the 2022 Winter Olympics are:
-
-- **Men's Tournament**: Niklas Edin, Oskar Eriksson, Rasmus Wranå, Christoffer Sundgren, Daniel Magnusson (Sweden)
-- **Women's Tournament**: Eve Muirhead, Vicky Wright, Jennifer Dodds, Hailey Duff, Mili Smith (Great Britain)
-- **Mixed Doubles Tournament**: Stefania Constantini, Amos Mosaner (Italy)
+2024-07-16 13:12:58.713467 enter: embedding_split_to_faiss
+2024-07-16 13:12:59.566929 embeds_np shape (6059, 1536)
+2024-07-16 13:12:59.586747 index stats 6059
+2024-07-16 13:12:59.688121 exit : embedding_split_to_faiss :seconds= 0.974675
+2024-07-16 13:12:59.689873 enter: ask             
+2024-07-16 13:13:05.957133 exit : ask              :seconds= 6.267229
+2024-07-16 13:13:05.957334 enter: ask             
+2024-07-16 13:13:06.141986 enter: get_top_docs    
+2024-07-16 13:13:06.142378 using faiss
+2024-07-16 13:13:06.161106 dists [0.21597599983215332]
+2024-07-16 13:13:06.161205 file_ids [3091]
+2024-07-16 13:13:06.161266 exit : get_top_docs     :seconds= 0.019447
+2024-07-16 13:13:10.699049 exit : ask              :seconds= 4.741532
+2024-07-16 13:13:10.704763 enter: ask             
+2024-07-16 13:13:10.883911 enter: get_top_docs    
+2024-07-16 13:13:10.884272 using faiss
+2024-07-16 13:13:10.897523 dists [0.21597599983215332, 0.2223154902458191]
+2024-07-16 13:13:10.897683 file_ids [3091, 2523]
+2024-07-16 13:13:10.897842 exit : get_top_docs     :seconds= 0.014036
+2024-07-16 13:13:15.457098 exit : ask              :seconds= 4.752192

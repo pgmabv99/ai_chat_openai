@@ -32,7 +32,6 @@ class test:
         self.client = OpenAI()
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
-        self.max_docs=3
         self.df_file="catalog/df.file"
         self.df_file_split="catalog/df_split.file"
         self.docs_dir = 'catalog/docs'
@@ -41,7 +40,7 @@ class test:
 
 
     @utz.time_decorator
-    def embedding_get(self):
+    def embedding_get_from_samples(self):
         # download pre-chunked text and pre-computed embeddings
         # this file is ~200 MB, so may take a minute depending on your connection speed
         """get list of embedding for wiki from external site and save it"""
@@ -86,18 +85,19 @@ class test:
             # assume equal length for all embeds???
             len_embeds=len(embeds)
             embeds_list.append(embeds)
-        # convert to numpy
-        embeds_np=np.array(embeds_list)
+        # convert to 2 dim numpy
+        embeds_np_2dim=np.array(embeds_list)
+        utz.print("embeds_np shape", embeds_np_2dim.shape)
         # build and load inded
         self.faiss_index = faiss.IndexFlatL2(len_embeds)  # L2 distance index
-        self.faiss_index.add(embeds_np)
+        self.faiss_index.add(embeds_np_2dim)
         utz.print("index stats", self.faiss_index.ntotal)
         faiss.write_index(self.faiss_index,  self.faiss_fn)
         return
 
-    def embedding_load(self):
+    def embedding_split_load(self):
         self.df=pd.read_pickle(self.df_file_split)
-        self.faiss_index=faiss.read_index(self.faiss_fn)
+        # self.faiss_index=faiss.read_index(self.faiss_fn)
         pass
 
     def copy_top_docs(self, n_prompts):
@@ -121,19 +121,17 @@ class test:
         query_embedding,
     ):
         """create df with top N docs."""
-        use_faiss=True
-        # use_faiss=False
-        if  use_faiss:
-            utz.print("using faiss", use_faiss)
+        if  self.use_faiss:
+            utz.print("using faiss")
             # 1 dim arrary
             query_embedding_np = np.array(query_embedding)
             # for faiss Reshape the array to 2 dim arrary  with a _single_ row equal to original 1 dim 
-            query_embedding_2dim = query_embedding_np.reshape(1, -1)
-            temp_dists, temp_ids = self.faiss_index.search(query_embedding_2dim, n_prompts)
+            query_embedding_np_2dim = query_embedding_np.reshape(1, -1)
+            temp_dists, temp_ids = self.faiss_index.search(query_embedding_np_2dim, n_prompts)
             self.dists=temp_dists[0].tolist()
             self.file_ids=temp_ids[0].tolist()
         else:
-            utz.print("using cosine as lambda", use_faiss)
+            utz.print("using cosine as lambda")
             self.df1=self.df
             # add column
             self.df1["dist"]=self.df1.embedding.apply(lambda x : spatial.distance.cosine(x, query_embedding))
@@ -223,10 +221,10 @@ class test:
         answer=response.choices[0].message.content
         return answer
 
-    def comp(self,query):
+    def compare(self,query,max_n_prompts):
         """ compare experiments  with variable number of docs"""
         os.system("rm output/*")
-        for n_prompts in range(0,self.max_docs+1):
+        for n_prompts in range(0,max_n_prompts+1):
             answer=t1.ask(query,n_prompts)
             with open("output/answer_"+str(n_prompts) , "w" ) as file:
                 file.write(answer+"\n")
@@ -242,14 +240,30 @@ class test:
 
 t1=test()
 
-# t1.embedding_get()
+# t1.embedding_get_from_samples()
 # t1.embedding_split()
-t1.embedding_split_to_faiss()
 
+# t1.use_faiss=False
+t1.use_faiss=True
+if t1.use_faiss:
+    t1.embedding_split_to_faiss()
+else:
+    t1.embedding_split_load()
 
 query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-answer=t1.ask(query,n_docs=1)
-utz.print(answer)
+
+# single_query=True
+single_query=False
+if single_query:
+    #  run single query
+    answer=t1.ask(query,n_docs=1)
+    utz.print(answer)
+else:
+    #  run repeatedly and compare results
+    max_n_ndocs=2
+    t1.compare(query,max_n_ndocs)
+
+
 
 # query = answer + ' show only men'
 # answer=t1.ask(query,n_docs=0)
@@ -258,13 +272,6 @@ utz.print(answer)
 # query = answer + ' now show only women'
 # answer=t1.ask(query,n_docs=0)
 # utz.print(answer)
-
-# t1.embedding_load()
-# t1.comp(query)
-
-
-
-
 
 # # t1.get_num_tokens("dear ,come here dear")
 # # t1.get_real_tokens_gpt2("dear ,come here dear")
