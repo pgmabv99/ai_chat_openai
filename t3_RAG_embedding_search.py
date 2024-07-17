@@ -2,18 +2,22 @@
 # imports
 import ast  # for converting embeddings saved as strings back to arrays
 from openai import OpenAI # for calling the OpenAI API
-import pandas as pd  # for storing text and embeddings data
-import numpy as np    #for faiss
 
 import tiktoken  # for counting tokens
-from scipy import spatial  # for calculating vector similarities for search
-from transformers import GPT2Tokenizer
-import faiss
 
-from datetime import  datetime
+# alternatives for vector search
+from scipy import spatial  # by hand compute cosine distance
+import faiss   # use fascebook search package
+#  ??
+from transformers import GPT2Tokenizer
+
+# from datetime import  datetime
 import os
 import shutil
-import mwparserfromhell
+import mwparserfromhell  # to parse wiki pages
+
+import pandas as pd   #for direct cosine distrane
+import numpy as np    #for faiss
 
 # utilities from py_utz
 from utz import utz
@@ -29,7 +33,7 @@ class test:
 
     def __init__(self) -> None:
         utz.logset()
-        self.client = OpenAI()
+        self.openai_cln = OpenAI()
         self.token_budget = 4096 - 500
         # self.token_budget =  10**5
         self.df_file="catalog/df.file"
@@ -74,7 +78,7 @@ class test:
         return
 
     @utz.time_decorator
-    def embedding_split_to_faiss(self):
+    def embedding_pickle_to_faiss(self):
         """build and save faiss indes"""
         df_temp=pd.read_pickle(self.df_file_split)
         # convert to list
@@ -95,39 +99,48 @@ class test:
         faiss.write_index(self.faiss_index,  self.faiss_fn)
         return
 
-    def embedding_split_load(self):
+    def embedding_pickle_load(self):
         self.df=pd.read_pickle(self.df_file_split)
-        # self.faiss_index=faiss.read_index(self.faiss_fn)
         pass
 
-    def copy_top_docs(self, n_prompts):
-        """ copy to docs for ease of check"""
-        for i  in range(n_prompts):
-            with open(self.util_get_doc_filename(self.file_ids[i])) as f1:
+    def copy_top_docs(self):
+        """ copy to docs for ease of checking"""
+        for i,file_id  in enumerate(self.file_ids):
+            with open(self.util_get_doc_filename(file_id)) as f1:
                 doc=f1.read()
             string_wiki=mwparserfromhell.parse(doc)
             string_text=string_wiki.strip_code()
             string_list=string_text.split(".")
             string_text="\n".join(string_list)
             dist=str(round(self.dists[i],3))
-            with open("output/doc{}_{}_{}".format(i,self.file_ids[i] ,dist),"w")as f1:
+            with open("output/doc{}_{}_{}".format(i,file_id ,dist),"w")as f1:
                 f1.write(string_text)
         return
 
-    # search function
+    # 
     @utz.time_decorator
     def get_top_docs(self,
-        n_prompts :int,
-        query_embedding,
-    ):
-        """create df with top N docs."""
+                        n_docs :int,
+                        query,
+                    ):
+        """create a list  with top N docs closest to query """
+        
+        # get embedding for the current query
+        query_embedding_response = self.openai_cln.embeddings.create(
+            model=test.EMBEDDING_MODEL,
+            input=query,
+        )
+        query_embedding = query_embedding_response.data[0].embedding
+        
         if  self.use_faiss:
             utz.print("using faiss")
             # 1 dim arrary
             query_embedding_np = np.array(query_embedding)
             # for faiss Reshape the array to 2 dim arrary  with a _single_ row equal to original 1 dim 
             query_embedding_np_2dim = query_embedding_np.reshape(1, -1)
-            temp_dists, temp_ids = self.faiss_index.search(query_embedding_np_2dim, n_prompts)
+            # do search
+            temp_dists, temp_ids = self.faiss_index.search(query_embedding_np_2dim, n_docs)
+            # make a list of top N
             self.dists=temp_dists[0].tolist()
             self.file_ids=temp_ids[0].tolist()
         else:
@@ -136,26 +149,18 @@ class test:
             # add column
             self.df1["dist"]=self.df1.embedding.apply(lambda x : spatial.distance.cosine(x, query_embedding))
             # sort and take highest
-            self.df1=self.df1.sort_values("dist",ascending=True).head(n_prompts)
-            # copy  docs to disk
+            self.df1=self.df1.sort_values("dist",ascending=True).head(n_docs)
+            # make a list of top N
             self.dists=self.df1["dist"].tolist()
             self.file_ids=self.df1["file_id"].tolist()
 
 
-        self.copy_top_docs(n_prompts)
+        self.copy_top_docs()
         utz.print("dists",self.dists)
         utz.print("file_ids",self.file_ids)
 
         return
 
-    def get_num_tokens(self,
-                   text: str
-                   ) -> int:
-        """Return the number of tokens in a string."""
-        encoding = tiktoken.encoding_for_model(test.GPT_MODEL)
-        tokens=encoding.encode(text)
-        num_tokens=len(tokens)
-        return num_tokens
 
     def get_real_tokens_gpt2(self,text):
         # Load the GPT-2 tokenizer
@@ -166,114 +171,134 @@ class test:
 
     def prompt_build_from_docs(self,
                      query,
-                     n_docs,
                      ):
-        """Return a prompt for GPT, with relevant docs pulled from a dataframe."""
+        """Return a prompt for GPT, with addition documents."""
         prompt=""
         # add introduction
         introduction = 'Use the below articles on the 2022 Winter Olympics to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer."'
-        introduction = ''
         prompt += introduction
 
-        # add top N closest docs
-        question = f"\n\nQuestion: {query}"
-        for i in range(n_docs):
-            with open(self.util_get_doc_filename(self.file_ids[i])) as f1:
+        # add query 
+        query_plus = f"\n\nQuestion: {query}"
+        
+        # add top N closest docs from the list
+        encoding = tiktoken.encoding_for_model(test.GPT_MODEL)
+        for i, file_id in enumerate(self.file_ids):
+            with open(self.util_get_doc_filename(file_id)) as f1:
                 doc=f1.read()
-                next_article = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
-                num_tokens=self.get_num_tokens(prompt+ question + next_article)
+                doc_plus = f'\n\nWikipedia article section:\n"""\n{doc}\n"""'
+                # get number of tokens
+                tokens=encoding.encode(prompt+ query_plus + doc_plus)
+                num_tokens=len(tokens)
+                utz.print("== doc {} len in bytes {} num_token {}".format(i, len(doc_plus),num_tokens))
                 if (num_tokens> self.token_budget):
                     utz.print("budget exceeded :", num_tokens)
                     break
                 else:
-                    prompt += next_article
+                    prompt += doc_plus
 
-        # add user question
-        prompt+=question
+        # add user question (again?)
+        prompt+=query_plus
+        
         return prompt
 
     @utz.time_decorator
     def ask(self,query,n_docs) :
         """Answers a query using GPT n_docs of    additonal docs."""
+        
         if n_docs >0 :
-            query_embedding_response = self.client.embeddings.create(
-                model=test.EMBEDDING_MODEL,
-                input=query,
-            )
-            query_embedding = query_embedding_response.data[0].embedding
-            self.get_top_docs(n_docs, query_embedding)
-            prompt = self.prompt_build_from_docs(query,n_docs)
+
+            # get documents that are close to query
+            self.get_top_docs(n_docs, query)
+            # add docs to prompt
+            prompt = self.prompt_build_from_docs(query)
         else:
+            #  just use the query 
             prompt = query
 
-
+        #  build messages and get response content
         messages = [
             {"role": "system", "content": "You answer questions about the 2022 Winter Olympics."},
             {"role": "user", "content": prompt},
         ]
-        response = self.client.chat.completions.create(
+        response = self.openai_cln.chat.completions.create(
             model=test.GPT_MODEL,
             messages=messages,
             temperature=0,
             seed=1,
             # temperature=1
         )
-        answer=response.choices[0].message.content
-        return answer
+        content=response.choices[0].message.content
+        
+        return content
 
     def compare(self,query,max_n_prompts):
         """ compare experiments  with variable number of docs"""
-        os.system("rm output/*")
+
         for n_prompts in range(0,max_n_prompts+1):
-            answer=t1.ask(query,n_prompts)
+            answer=self.ask(query,n_prompts)
             with open("output/answer_"+str(n_prompts) , "w" ) as file:
                 file.write(answer+"\n")
             if n_prompts >0 :
-                command = ("diff" + " output/answer_"+ str(n_prompts) +
-                                    " output/answer_"+ str(n_prompts-1) +">"
-                                    + " output/diff" + str(n_prompts))
+                command = ("diff " + "output/answer_"+ str(n_prompts) + " "
+                                   + "output/answer_"+ str(n_prompts-1) +" >"
+                                   + "output/diff" + str(n_prompts))
 
                 os.system(command)
         return
+    
+    def output_init(self):
+        # Re-create the output folder
+        if os.path.exists("output"):
+            shutil.rmtree("output")
+        os.makedirs("output")
+        
+        
+    #  test runs
+    def run_query(self):
+        self.output_init()
 
+        load_from_samples=False
+        if load_from_samples:
+            # build pickle
+            self.embedding_get_from_samples()
+            self.embedding_split()
+
+        self.use_faiss=False
+        # self.use_faiss=True
+        if self.use_faiss:
+            self.embedding_pickle_to_faiss()
+        else:
+            self.embedding_pickle_load()
+
+        query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
+
+        single_query=True
+        # single_query=False
+        if single_query:
+            #  run single query
+            answer=self.ask(query,n_docs=2)
+            utz.print(answer)
+        else:
+            #  run repeatedly and compare results
+            max_n_ndocs=2
+            self.compare(query,max_n_ndocs)
+
+    def run_decode_voice(self):
+        audio_file= open("catalog/untitled.wav", "rb")
+        transcription =self.openai_cln.audio.transcriptions.create(
+                        model="whisper-1", 
+                        file=audio_file
+                        )
+        utz.print(transcription.text)
 
 
 t1=test()
 
-load_from_samples=False
-if load_from_samples:
-    t1.embedding_get_from_samples()
-    t1.embedding_split()
+# t1.run_query()
 
-# t1.use_faiss=False
-t1.use_faiss=True
-if t1.use_faiss:
-    t1.embedding_split_to_faiss()
-else:
-    t1.embedding_split_load()
-
-query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-
-# single_query=True
-single_query=False
-if single_query:
-    #  run single query
-    answer=t1.ask(query,n_docs=1)
-    utz.print(answer)
-else:
-    #  run repeatedly and compare results
-    max_n_ndocs=2
-    t1.compare(query,max_n_ndocs)
+t1.run_decode_voice()
 
 
 
-# query = answer + ' show only men'
-# answer=t1.ask(query,n_docs=0)
-# utz.print(answer)
 
-# query = answer + ' now show only women'
-# answer=t1.ask(query,n_docs=0)
-# utz.print(answer)
-
-# # t1.get_num_tokens("dear ,come here dear")
-# # t1.get_real_tokens_gpt2("dear ,come here dear")
