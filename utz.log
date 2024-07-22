@@ -1,4 +1,15 @@
-2024-07-22 13:42:44.875306 using query  modelgpt-4o-mini embed modeltext-embedding-ada-002
-2024-07-22 13:42:45.232347 enter: ask             
-2024-07-22 13:42:46.839788 exit : ask              :seconds= 1.607428
-2024-07-22 13:42:46.839897 At the 2022 Winter Olympics, the gold medal in men's curling was won by the Swedish team, while the gold medal in women's curling was won by the British team, specifically Team GB (Great Britain). The men's team was skipped by Niklas Edin, and the women's team was skipped by Eve Muirhead.
+2024-07-22 14:12:33.187304 using query  modelgpt-4o-mini embed modeltext-embedding-ada-002
+2024-07-22 14:12:33.560995 enter: ask             
+2024-07-22 14:12:33.561168 enter: get_top_docs    
+2024-07-22 14:12:33.784345 using cosine as lambda
+2024-07-22 14:12:34.573625 dists [0.09623510644895061, 0.10420756461393665]
+2024-07-22 14:12:34.573791 file_ids [2507, 3091]
+2024-07-22 14:12:34.573871 exit : get_top_docs     :seconds= 1.012729
+2024-07-22 14:12:34.795874 == doc 0 len in bytes 553 num_token 256
+2024-07-22 14:12:34.796559 == doc 1 len in bytes 1661 num_token 871
+2024-07-22 14:12:36.476757 exit : ask              :seconds= 2.915608
+2024-07-22 14:12:36.477142 | Event            | Gold Medal Winners                          |
+|------------------|--------------------------------------------|
+| Men's Curling    | Niklas Edin, Oskar Eriksson, Rasmus Wranå, Christoffer Sundgren, Daniel Magnusson |
+| Women's Curling   | Eve Muirhead, Vicky Wright, Jennifer Dodds, Hailey Duff, Mili Smith |
+| Mixed Doubles    | Stefania Constantini, Amos Mosaner        |

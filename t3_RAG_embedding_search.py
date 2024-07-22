@@ -272,13 +272,14 @@ class test:
             self.embedding_pickle_load()
 
         query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
+        query += '.format as table'
 
         single_query=True
         # single_query=False
         if single_query:
             #  run single query
             n_docs=2
-            n_docs=0
+            # n_docs=0
             answer=self.ask(query,n_docs)
             utz.print(answer)
             ct = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
