@@ -1,1 +1,4 @@
-2024-07-17 17:33:55.565661 Who won curling competition in 2020 Olympics?
+2024-07-22 13:42:44.875306 using query  modelgpt-4o-mini embed modeltext-embedding-ada-002
+2024-07-22 13:42:45.232347 enter: ask             
+2024-07-22 13:42:46.839788 exit : ask              :seconds= 1.607428
+2024-07-22 13:42:46.839897 At the 2022 Winter Olympics, the gold medal in men's curling was won by the Swedish team, while the gold medal in women's curling was won by the British team, specifically Team GB (Great Britain). The men's team was skipped by Niklas Edin, and the women's team was skipped by Eve Muirhead.

@@ -21,15 +21,10 @@ import numpy as np    #for faiss
 
 # utilities from py_utz
 from utz import utz
+from datetime import datetime
 
 class test:
-    EMBEDDING_MODEL = "text-embedding-ada-002"
-    # EMBEDDING_MODEL = "text-embedding-3-large"  # has too many dimensions compared to ada-002
-    # EMBEDDING_MODEL = "text-embedding-3-small"  # same dimansions but distance reversed  compared to ada-002
 
-    # GPT_MODEL = "gpt-3.5-turbo"
-    # GPT_MODEL = "gpt-4"
-    GPT_MODEL = "gpt-4-turbo-preview"
 
     def __init__(self) -> None:
         utz.logset()
@@ -40,6 +35,11 @@ class test:
         self.df_file_split="catalog/df_split.file"
         self.docs_dir = 'catalog/docs'
         self.faiss_fn="catalog/faiss.index"
+        self.query_model="gpt-4-turbo-preview"
+        self.query_model="gpt-4o-mini"
+        # self.query_model="gpt-4o"
+        self.embedding_model="text-embedding-ada-002"
+        utz.print("using query  model{} embed model{}".format(self.query_model, self.embedding_model))
         pass
 
 
@@ -127,7 +127,7 @@ class test:
         
         # get embedding for the current query
         query_embedding_response = self.openai_cln.embeddings.create(
-            model=test.EMBEDDING_MODEL,
+            model=self.embedding_model,
             input=query,
         )
         query_embedding = query_embedding_response.data[0].embedding
@@ -182,7 +182,7 @@ class test:
         query_plus = f"\n\nQuestion: {query}"
         
         # add top N closest docs from the list
-        encoding = tiktoken.encoding_for_model(test.GPT_MODEL)
+        encoding = tiktoken.encoding_for_model(self.embedding_model)
         for i, file_id in enumerate(self.file_ids):
             with open(self.util_get_doc_filename(file_id)) as f1:
                 doc=f1.read()
@@ -222,7 +222,7 @@ class test:
             {"role": "user", "content": prompt},
         ]
         response = self.openai_cln.chat.completions.create(
-            model=test.GPT_MODEL,
+            model=self.query_model,
             messages=messages,
             temperature=0,
             seed=1,
@@ -277,8 +277,14 @@ class test:
         # single_query=False
         if single_query:
             #  run single query
-            answer=self.ask(query,n_docs=2)
+            n_docs=2
+            n_docs=0
+            answer=self.ask(query,n_docs)
             utz.print(answer)
+            ct = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            # with open("output_old/answer"+ct,"w") as f1:
+            with open("output_old/answer"+self.query_model+"_ndoc_"+str(n_docs)+"_"+ct,"w") as f1:
+                f1.write(answer)
         else:
             #  run repeatedly and compare results
             max_n_ndocs=2
@@ -295,9 +301,9 @@ class test:
 
 t1=test()
 
-# t1.run_query()
+t1.run_query()
 
-t1.run_decode_voice()
+# t1.run_decode_voice()
 
 
 
