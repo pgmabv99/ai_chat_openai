@@ -2,6 +2,9 @@ from openai import OpenAI
 import json
 
 client = OpenAI()
+model="gpt-4o-mini"
+model="gpt-4o"
+# model="gpt-3.5-turbo-0125"
 
 # Example dummy function hard coded to return the same weather
 # In production, this could be your backend API or an external API
@@ -31,7 +34,7 @@ def run_conversation():
     # Step 1: send the conversation and available functions to the model
     # messages_list = [{"role": "user", "content": "What's the weather like in San Francisco, Tokyo, and Paris?"}]
     messages_list = [{"role": "user", "content": "What was the weather  like 100 years ago year  in San Francisco, Tokyo, and Paris?"}]
-    # messages_list = [{"role": "user", "content": "What will the weather be  like next year in San Francisco, Tokyo, and Paris?"}]
+    messages_list = [{"role": "user", "content": "What will the weather be  like next year in San Francisco, Tokyo, and Paris?"}]
     tools = [
         {
             "type": "function",
@@ -76,13 +79,14 @@ def run_conversation():
         "get_future_weather": get_future_weather,
     }
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo-0125",
+    response1 = client.chat.completions.create(
+        model=model,
         messages=messages_list,
         tools=tools,
+        seed=1,
         tool_choice="auto",  # auto is default, but we'll be explicit
     )
-    response_message = response.choices[0].message
+    response_message = response1.choices[0].message
     tool_calls = response_message.tool_calls
     # Step 2: check if the model wanted to call a function
     if tool_calls:
@@ -109,14 +113,18 @@ def run_conversation():
                     "content": function_response,
                 }
             )  # extend conversation with function response
-        second_response = client.chat.completions.create(
-            model="gpt-3.5-turbo-0125",
+        response2 = client.chat.completions.create(
+            model=model,
             messages=messages_list,
+            seed=1,
             temperature=1.2
         )  # get a new response from the model where it can see the function response
         for msg in messages_list:
             print("===")
             print(msg)
-        return second_response
-
-print("final =========\n",run_conversation())
+        return response2
+    else:
+        return response1
+    
+resp=run_conversation()
+print("final =========\n",resp.choices[0].message.content)
