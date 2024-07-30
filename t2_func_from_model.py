@@ -95,6 +95,7 @@ def run_conversation():
         messages_list.append(response_message)  # extend conversation with assistant's reply
         # Step 4: send the info for each function call and function response to the model
         for tool_call in tool_calls:
+            print("==tool====", tool_call)
             function_name = tool_call.function.name
             function_ptr = available_functions[function_name]
             function_args = json.loads(tool_call.function.arguments)
@@ -120,7 +121,7 @@ def run_conversation():
             temperature=1.2
         )  # get a new response from the model where it can see the function response
         for msg in messages_list:
-            print("===")
+            print("===msg===")
             print(msg)
         return response2
     else:

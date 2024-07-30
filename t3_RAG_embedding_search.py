@@ -23,7 +23,7 @@ import numpy as np    #for faiss
 from utz import utz
 from datetime import datetime
 
-class test:
+class search:
 
 
     def __init__(self) -> None:
@@ -255,7 +255,7 @@ class test:
         
         
     #  test runs
-    def run_query(self):
+    def run_query(self,query):
         self.output_init()
 
         load_from_samples=False
@@ -271,8 +271,7 @@ class test:
         else:
             self.embedding_pickle_load()
 
-        query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
-        query += '.format as table'
+
 
         single_query=True
         # single_query=False
@@ -286,10 +285,12 @@ class test:
             # with open("output_old/answer"+ct,"w") as f1:
             with open("output_old/answer"+self.query_model+"_ndoc_"+str(n_docs)+"_"+ct,"w") as f1:
                 f1.write(answer)
+            return answer
         else:
             #  run repeatedly and compare results
             max_n_ndocs=2
             self.compare(query,max_n_ndocs)
+            return "comparison done. see output "
 
     def run_decode_voice(self):
         audio_file= open("catalog/untitled.wav", "rb")
@@ -300,11 +301,14 @@ class test:
         utz.print(transcription.text)
 
 
-t1=test()
 
-t1.run_query()
+if __name__ == "__main__":
+    s1=search()
+    query = 'Which athletes won the gold medal in curling at the 2022 Winter Olympics?'
+    query += '.format as table'
+    s1.run_query(query)
 
-# t1.run_decode_voice()
+    # s1.run_decode_voice()
 
 
 
